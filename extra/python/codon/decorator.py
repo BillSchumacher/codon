@@ -18,8 +18,7 @@ from .codon_jit import JITWrapper, JITError, codon_library
 
 if "CODON_PATH" not in os.environ:
     codon_path = []
-    codon_lib_path = codon_library()
-    if codon_lib_path:
+    if codon_lib_path := codon_library():
         codon_path.append(Path(codon_lib_path).parent / "stdlib")
     codon_path.append(
         Path(os.path.expanduser("~")) / ".codon" / "lib" / "codon" / "stdlib"
@@ -58,15 +57,14 @@ def _common_type(t, debug, sample_size):
                 return "pyobj"
             sub = s
     if is_optional and sub and sub != "pyobj":
-        sub = "Optional[{}]".format(sub)
-    return sub if sub else "pyobj"
+        sub = f"Optional[{sub}]"
+    return sub or "pyobj"
 
 
 def _codon_type(arg, **kwargs):
     t = type(arg)
 
-    s = pod_conversions.get(t, "")
-    if s:
+    if s := pod_conversions.get(t, ""):
         return s
     if issubclass(t, list):
         return "List[{}]".format(_common_type(arg, **kwargs))
@@ -78,14 +76,12 @@ def _codon_type(arg, **kwargs):
         )
     if issubclass(t, tuple):
         return "Tuple[{}]".format(",".join(_codon_type(a, **kwargs) for a in arg))
-    s = custom_conversions.get(t, "")
-    if s:
+    if s := custom_conversions.get(t, ""):
         j = ",".join(_codon_type(getattr(arg, slot), **kwargs) for slot in t.__slots__)
-        return "{}[{}]".format(s, j)
+        return f"{s}[{j}]"
 
-    debug = kwargs.get("debug", None)
-    if debug:
-        msg = "cannot convert " + t.__name__
+    if debug := kwargs.get("debug"):
+        msg = f"cannot convert {t.__name__}"
         if msg not in _error_msgs:
             print("[python]", msg, file=sys.stderr)
             _error_msgs.add(msg)
@@ -136,7 +132,7 @@ def _obj_to_str(obj, **kwargs) -> str:
             )
             obj_str = astunparse.unparse(node)
     else:
-        raise TypeError("Function or class expected, got " + type(obj).__name__)
+        raise TypeError(f"Function or class expected, got {type(obj).__name__}")
     return obj_str.replace("_@par", "@par")
 
 
@@ -144,7 +140,7 @@ def _obj_name(obj) -> str:
     if inspect.isclass(obj) or callable(obj):
         return obj.__name__
     else:
-        raise TypeError("Function or class expected, got " + type(obj).__name__)
+        raise TypeError(f"Function or class expected, got {type(obj).__name__}")
 
 
 def _parse_decorated(obj, **kwargs):
@@ -153,30 +149,22 @@ def _parse_decorated(obj, **kwargs):
 
 def convert(t):
     if not hasattr(t, "__slots__"):
-        raise JITError("class '{}' does not have '__slots__' attribute".format(str(t)))
+        raise JITError(f"class '{str(t)}' does not have '__slots__' attribute")
 
     name = t.__name__
     slots = t.__slots__
     code = (
         "@tuple\n"
-        "class "
-        + name
-        + "["
-        + ",".join("T{}".format(i) for i in range(len(slots)))
-        + "]:\n"
-    )
+        "class " + name + "[" + ",".join(f"T{i}" for i in range(len(slots)))
+    ) + "]:\n"
     for i, slot in enumerate(slots):
-        code += "    {}: T{}\n".format(slot, i)
+        code += f"    {slot}: T{i}\n"
 
     # PyObject_GetAttrString
     code += "    def __from_py__(p: cobj):\n"
     for i, slot in enumerate(slots):
-        code += "        a{} = T{}.__from_py__(PyObject_GetAttrString(p, '{}'.ptr))\n".format(
-            i, i, slot
-        )
-    code += "        return {}({})\n".format(
-        name, ", ".join("a{}".format(i) for i in range(len(slots)))
-    )
+        code += f"        a{i} = T{i}.__from_py__(PyObject_GetAttrString(p, '{slot}'.ptr))\n"
+    code += f'        return {name}({", ".join(f"a{i}" for i in range(len(slots)))})\n'
 
     _jit.execute(code, "", 0, False)
     custom_conversions[t] = name
@@ -221,6 +209,4 @@ def jit(fn=None, debug=None, sample_size=5, pyvars=None):
 
         return wrapped
 
-    if fn:
-        return _decorate(fn)
-    return _decorate
+    return _decorate(fn) if fn else _decorate

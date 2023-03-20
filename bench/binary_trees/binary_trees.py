@@ -19,10 +19,7 @@ def make_tree(d):
 
 def check_tree(node):
     l, r = node.left, node.right
-    if l is None:
-        return 1
-    else:
-        return 1 + check_tree(l) + check_tree(r)
+    return 1 if l is None else 1 + check_tree(l) + check_tree(r)
 
 def make_check(itde, make=make_tree, check=check_tree):
     i, d = itde
@@ -49,9 +46,7 @@ def main(n, min_depth=4):
     mmd = max_depth + min_depth
     for d in range(min_depth, stretch_depth, 2):
         i = 2 ** (mmd - d)
-        cs = 0
-        for argchunk in get_argchunks(i, d):
-            cs += sum(map(make_check, argchunk))
+        cs = sum(sum(map(make_check, argchunk)) for argchunk in get_argchunks(i, d))
         print(f'{i}\t trees of depth {d}\t check: {cs}')
 
     print(f'long lived tree of depth {max_depth}\t check: {check_tree(long_lived_tree)}')

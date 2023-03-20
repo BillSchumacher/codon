@@ -1,7 +1,7 @@
 import time
 MAX    = 1000  # maximum Mandelbrot iterations
 N      = 4096  # width and height of image
-pixels = [0 for _ in range(N * N)]
+pixels = [0 for _ in range(N**2)]
 
 def scale(x, a, b):
     return a + (x/N)*(b - a)

@@ -44,7 +44,7 @@ def test_roundtrip():
         return x
 
     for _ in range(5):
-        assert roundtrip(None) == None
+        assert roundtrip(None) is None
         assert roundtrip(42) == 42
         assert roundtrip(3.14) == 3.14
         assert roundtrip(False) == False
@@ -136,8 +136,7 @@ def b(x, z):
 
 @codon.jit(pyvars=['b'])
 def c(x, y):
-    n = b(x,y) ** a(1)
-    return n
+    return b(x,y) ** a(1)
 
 def test_cross_calls():
     assert foo([None, 1]) == "List[Optional[int]]; [None, 1]"

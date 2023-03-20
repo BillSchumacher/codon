@@ -1,6 +1,7 @@
 """
 Go board game
 """
+
 import math
 import random
 from time import time
@@ -11,7 +12,7 @@ KOMI = 7.5
 EMPTY, WHITE, BLACK = 0, 1, 2
 SHOW = {EMPTY: '.', WHITE: 'o', BLACK: 'x'}
 PASS = -1
-MAXMOVES = SIZE * SIZE * 3
+MAXMOVES = SIZE**2 * 3
 TIMESTAMP = 0
 MOVES = 0
 
@@ -32,8 +33,9 @@ class Square:
         self.pos = pos
         self.timestamp = TIMESTAMP
         self.removestamp = TIMESTAMP
-        self.zobrist_strings = [random.randrange(9223372036854775807)
-                                for i in range(3)]
+        self.zobrist_strings = [
+            random.randrange(9223372036854775807) for _ in range(3)
+        ]
 
     def set_neighbours(self):
         x, y = self.pos % SIZE, self.pos // SIZE
@@ -84,9 +86,8 @@ class Square:
                 neighbour_ref = neighbour.find(update)
                 if neighbour_ref.pos == reference.pos:
                     neighbour.remove(reference, update)
-                else:
-                    if update:
-                        neighbour_ref.ledges += 1
+                elif update:
+                    neighbour_ref.ledges += 1
 
     def find(self, update=False):
         reference = self.reference
@@ -176,16 +177,13 @@ class Board:
         self.black_dead = 0
 
     def move(self, pos):
-        square = self.squares[pos]
         if pos != PASS:
+            square = self.squares[pos]
             square.move(self.color)
             self.emptyset.remove(square.pos)
         elif self.lastmove == PASS:
             self.finished = True
-        if self.color == BLACK:
-            self.color = WHITE
-        else:
-            self.color = BLACK
+        self.color = WHITE if self.color == BLACK else BLACK
         self.lastmove = pos
         self.history.append(pos)
 
@@ -243,19 +241,13 @@ class Board:
             self.move(pos)
 
     def score(self, color):
-        if color == WHITE:
-            count = KOMI + self.black_dead
-        else:
-            count = self.white_dead
+        count = KOMI + self.black_dead if color == WHITE else self.white_dead
         for square in self.squares:
             squarecolor = square.color
             if squarecolor == color:
                 count += 1
             elif squarecolor == EMPTY:
-                surround = 0
-                for neighbour in square.neighbours:
-                    if neighbour.color == color:
-                        surround += 1
+                surround = sum(neighbour.color == color for neighbour in square.neighbours)
                 if surround == len(square.neighbours):
                     count += 1
         return count
@@ -265,7 +257,7 @@ class Board:
             if square.color == EMPTY:
                 continue
 
-            members1 = set([square])
+            members1 = {square}
             changed = True
             while changed:
                 changed = False
@@ -282,14 +274,11 @@ class Board:
 
             root = square.find()
 
-            # print 'members1', square, root, members1
-            # print 'ledges1', square, ledges1
-
-            members2 = set()
-            for square2 in self.squares:
-                if square2.color != EMPTY and square2.find() == root:
-                    members2.add(square2)
-
+            members2 = {
+                square2
+                for square2 in self.squares
+                if square2.color != EMPTY and square2.find() == root
+            }
             ledges2 = root.ledges
             # print 'members2', square, root, members1
             # print 'ledges2', square, ledges2
@@ -300,17 +289,20 @@ class Board:
 
             set(self.emptyset.empties)
 
-            empties2 = set()
-            for square in self.squares:
-                if square.color == EMPTY:
-                    empties2.add(square.pos)
+            empties2 = {square.pos for square in self.squares if square.color == EMPTY}
 
     def __repr__(self):
         result = []
         for y in range(SIZE):
             start = to_pos(0, y)
-            result.append(''.join(
-                [SHOW[square.color] + ' ' for square in self.squares[start:start + SIZE]]))
+            result.append(
+                ''.join(
+                    [
+                        f'{SHOW[square.color]} '
+                        for square in self.squares[start : start + SIZE]
+                    ]
+                )
+            )
         return '\n'.join(result)
 
 
@@ -321,7 +313,7 @@ class UCTNode:
         self.pos = -1
         self.wins = 0
         self.losses = 0
-        self.pos_child = [None for x in range(SIZE * SIZE)]
+        self.pos_child = [None for _ in range(SIZE * SIZE)]
         self.parent = None
 
     def play(self, board):
@@ -362,7 +354,7 @@ class UCTNode:
 
     def random_playout(self, board):
         """ random play until both players pass """
-        for x in range(MAXMOVES):  # XXX while not self.finished?
+        for _ in range(MAXMOVES):
             if board.finished:
                 break
             board.move(board.random_move())
@@ -371,10 +363,7 @@ class UCTNode:
         """ update win/loss count along path """
         wins = board.score(BLACK) >= board.score(WHITE)
         for node in path:
-            if color == BLACK:
-                color = WHITE
-            else:
-                color = BLACK
+            color = WHITE if color == BLACK else BLACK
             if wins == (color == BLACK):
                 node.wins += 1
             else:
@@ -435,7 +424,7 @@ def computer_move(board):
     tree = UCTNode()
     tree.unexplored = board.useful_moves()
     nboard = Board()
-    for game in range(GAMES):
+    for _ in range(GAMES):
         node = tree
         nboard.reset()
         nboard.replay(board.history)
