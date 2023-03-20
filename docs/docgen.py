@@ -22,9 +22,11 @@ def load_json(directory):
     # Get all codon files in the directory
     files=[]
     for root,_,items in os.walk(directory):
-        for f in items:
-            if f.endswith('.codon') and "__init_test__.codon" not in f:
-                files.append(os.path.abspath(os.path.join(root,f)))
+        files.extend(
+            os.path.abspath(os.path.join(root, f))
+            for f in items
+            if f.endswith('.codon') and "__init_test__.codon" not in f
+        )
     files='\n'.join(files)
     s=sp.run(['../../build/codon','doc'],stdout=sp.PIPE,input=files.encode('utf-8'))
     if s.returncode!=0:
@@ -33,7 +35,7 @@ def load_json(directory):
 
 
 j=load_json(root)
-print(f" - Done with codon")
+print(" - Done with codon")
 sys.exit(0)
 # with open('x.json','w') as f:
 #     json.dump(j,f,indent=2)
@@ -65,12 +67,12 @@ for directory,modules in parsed_modules.items():
         print(f"========\n",file=f)
 
         print(".. toctree::\n",file=f)
-        for m in sorted(set(m for m,_ in modules)):
+        for m in sorted({m for m,_ in modules}):
             if os.path.isdir(f'{root}/{directory}/{m}'):
                 print(f"   {m}/index",file=f)
             else:
                 print(f"   {m}",file=f)
-print(f" - Done with directory tree")
+print(" - Done with directory tree")
 
 
 def parse_docstr(s,level=1):
@@ -93,14 +95,11 @@ def parse_docstr(s,level=1):
 def parse_type(a):
     """Parse type signature"""
     s=''
-    if isinstance(a,list):
-        head,tail=a[0],a[1:]
-    else:
-        head,tail=a,[]
+    head,tail = (a[0], a[1:]) if isinstance(a,list) else (a, [])
     s+=j[head]["name"] if head[0].isdigit() else head
     if tail:
         for ti,t in enumerate(tail):
-            s+="[" if not ti else ", "
+            s += ", " if ti else "["
             s+=parse_type(t)
         s+="]"
     return s
@@ -117,7 +116,7 @@ def parse_fn(v,skip_self=False,skip_braces=False):
     for ai,a in enumerate(v['args']):
         if ai==0 and a["name"]=="self" and skip_self:
             continue
-        s+="" if not cnt else ", "
+        s += ", " if cnt else ""
         cnt+=1
         s+=f'{a["name"]}'
         if "type" in a:
@@ -147,7 +146,7 @@ for directory,(name,mid) in {(d,m) for d,mm in parsed_modules.items() for m in m
         print(f".. codon:module:: {module}\n",file=f)
         print(f":codon:mod:`{module}`",file=f)
         print("-"*(len(module)+13)+"\n",file=f)
-        directory_prefix=directory+'/' if directory!='.' else ''
+        directory_prefix = f'{directory}/' if directory!='.' else ''
         print(f"Source code: `{directory_prefix}{name}.codon <https://github.com/exaloop/codon/blob/master/stdlib/{directory}/{name}.codon>`_\n",file=f)
         if 'doc' in j[mid]:
             print(parse_docstr(j[mid]['doc']),file=f)
@@ -208,8 +207,13 @@ for directory,(name,mid) in {(d,m) for d,mm in parsed_modules.items() for m in m
                             f.write("\n"+parse_docstr(v['doc'],4)+"\n\n")
                         f.write("\n")
 
-                magics=[c for c in mt if len(j[c]['name'])>4 and j[c]['name'].startswith('__') and j[c]['name'].endswith('__')]
-                if magics:
+                if magics := [
+                    c
+                    for c in mt
+                    if len(j[c]['name']) > 4
+                    and j[c]['name'].startswith('__')
+                    and j[c]['name'].endswith('__')
+                ]:
                     print('   **Magic methods:**\n',file=f)
                     for c in magics:
                         v=j[c]
@@ -218,8 +222,9 @@ for directory,(name,mid) in {(d,m) for d,mm in parsed_modules.items() for m in m
                         if 'doc' in v:
                             f.write("\n"+parse_docstr(v['doc'],4)+"\n\n")
                         f.write("\n")
-                methods=[c for c in mt if j[c]['name'][0]!='_' and c not in props]
-                if methods:
+                if methods := [
+                    c for c in mt if j[c]['name'][0] != '_' and c not in props
+                ]:
                     print('   **Methods:**\n',file=f)
                     for c in methods:
                         v=j[c]
@@ -230,4 +235,4 @@ for directory,(name,mid) in {(d,m) for d,mm in parsed_modules.items() for m in m
             f.write("\n\n")
 
         f.write("\n\n")
-print(f" - Done with modules")
+print(" - Done with modules")

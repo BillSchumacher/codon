@@ -37,8 +37,7 @@ def get_python_library(python_version):
         # get the value of `LIBDIR`.
         libdir = du_sysconfig.get_config_var('LIBDIR')
         if sysconfig.get_config_var('MULTIARCH'):
-            masd = sysconfig.get_config_var('multiarchsubdir')
-            if masd:
+            if masd := sysconfig.get_config_var('multiarchsubdir'):
                 if masd.startswith(os.sep):
                     masd = masd[len(os.sep):]
                 libdir = os.path.join(libdir, masd)
@@ -73,4 +72,4 @@ def get_python_library(python_version):
 
     return python_library
 
-print(get_python_library('{}.{}'.format(sys.version_info[0], sys.version_info[1])))
+print(get_python_library(f'{sys.version_info[0]}.{sys.version_info[1]}'))

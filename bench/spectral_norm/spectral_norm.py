@@ -46,7 +46,7 @@ def bench_spectral_norm(loops):
     for _ in range_it:
         u = [1.] * DEFAULT_N
         v = None
-        for dummy in range(10):
+        for _ in range(10):
             v = eval_AtA_times_u(u)
             u = eval_AtA_times_u(v)
         vBv = vv = 0.

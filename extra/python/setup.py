@@ -14,16 +14,11 @@ exec(open("codon/version.py").read())
 ext = "dylib" if sys.platform == "darwin" else "so"
 
 codon_path = os.environ.get("CODON_DIR")
-if not codon_path:
-    c = shutil.which("codon")
-    if c:
-        codon_path = Path(c).parent / ".."
-else:
+if codon_path:
     codon_path = Path(codon_path)
-for path in [
-    os.path.expanduser("~") + "/.codon",
-    os.getcwd() + "/..",
-]:
+elif c := shutil.which("codon"):
+    codon_path = Path(c).parent / ".."
+for path in [os.path.expanduser("~") + "/.codon", f"{os.getcwd()}/.."]:
     path = Path(path)
     if not codon_path and path.exists():
         codon_path = path
@@ -42,7 +37,7 @@ if (
     )
     sys.exit(1)
 codon_path = codon_path.resolve()
-print("Codon: " + str(codon_path))
+print(f"Codon: {str(codon_path)}")
 
 
 if sys.platform == "darwin":

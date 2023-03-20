@@ -27,9 +27,9 @@ class Point:
         self.z /= norm
 
     def maximize(self, other):
-        self.x = self.x if self.x > other.x else other.x
-        self.y = self.y if self.y > other.y else other.y
-        self.z = self.z if self.z > other.z else other.z
+        self.x = max(self.x, other.x)
+        self.y = max(self.y, other.y)
+        self.z = max(self.z, other.z)
         return self
 
 

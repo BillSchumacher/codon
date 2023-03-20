@@ -33,25 +33,24 @@ class GVector(object):
 
     def __add__(self, other):
         if not isinstance(other, GVector):
-            raise ValueError("Can't add GVector to " + str(type(other)))
-        v = GVector(self.x + other.x, self.y + other.y, self.z + other.z)
-        return v
+            raise ValueError(f"Can't add GVector to {str(type(other))}")
+        return GVector(self.x + other.x, self.y + other.y, self.z + other.z)
 
     def __sub__(self, other):
         return self + other * -1
 
     def __mul__(self, other):
-        v = GVector(self.x * other, self.y * other, self.z * other)
-        return v
+        return GVector(self.x * other, self.y * other, self.z * other)
     __rmul__ = __mul__
 
     def linear_combination(self, other, l1, l2=None):
         if l2 is None:
             l2 = 1 - l1
-        v = GVector(self.x * l1 + other.x * l2,
-                    self.y * l1 + other.y * l2,
-                    self.z * l1 + other.z * l2)
-        return v
+        return GVector(
+            self.x * l1 + other.x * l2,
+            self.y * l1 + other.y * l2,
+            self.z * l1 + other.z * l2,
+        )
 
     def __str__(self):
         return "<%f, %f, %f>" % (self.x, self.y, self.z)
@@ -110,13 +109,14 @@ class Spline(object):
 
     def GetIndex(self, u):
         dom = self.GetDomain()
-        for ii in range(self.degree - 1, len(self.knots) - self.degree):
-            if u >= self.knots[ii] and u < self.knots[ii + 1]:
-                I = ii
-                break
-        else:
-            I = dom[1] - 1
-        return I
+        return next(
+            (
+                ii
+                for ii in range(self.degree - 1, len(self.knots) - self.degree)
+                if u >= self.knots[ii] and u < self.knots[ii + 1]
+            ),
+            dom[1] - 1,
+        )
 
     def __len__(self):
         return len(self.points)
@@ -146,10 +146,10 @@ class Chaosgame(object):
     def __init__(self, splines, thickness=0.1):
         self.splines = splines
         self.thickness = thickness
-        self.minx = min([p.x for spl in splines for p in spl.points])
-        self.miny = min([p.y for spl in splines for p in spl.points])
-        self.maxx = max([p.x for spl in splines for p in spl.points])
-        self.maxy = max([p.y for spl in splines for p in spl.points])
+        self.minx = min(p.x for spl in splines for p in spl.points)
+        self.miny = min(p.y for spl in splines for p in spl.points)
+        self.maxx = max(p.x for spl in splines for p in spl.points)
+        self.maxy = max(p.y for spl in splines for p in spl.points)
         self.height = self.maxy - self.miny
         self.width = self.maxx - self.minx
         self.num_trafos = []
@@ -205,17 +205,15 @@ class Chaosgame(object):
             point.x = self.maxx
         if point.y >= self.maxy:
             point.y = self.maxy
-        if point.x < self.minx:
-            point.x = self.minx
-        if point.y < self.miny:
-            point.y = self.miny
+        point.x = max(point.x, self.minx)
+        point.y = max(point.y, self.miny)
 
     def create_image_chaos(self, w, h, iterations, filename, rng_seed):
         # Always use the same sequence of random numbers
         # to get reproducible benchmark
         random.seed(rng_seed)
 
-        im = [[1] * h for i in range(w)]
+        im = [[1] * h for _ in range(w)]
         point = GVector((self.maxx + self.minx) / 2,
                         (self.maxy + self.miny) / 2, 0)
         for _ in range(iterations):
